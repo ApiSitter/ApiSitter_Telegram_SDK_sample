@@ -1,0 +1,187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ApiSitter - contacts.deleteContacts</title>
+    <script src="../../sdk/apisitter_telegram_sdk.min.js"></script>
+    <script>
+        var apiSitter;
+        var list_users;
+
+        var startApiSitter = function(){
+            showLoading(); // DOM visualization
+
+            var idClientTelegram = document.getElementById("idTelegram").value;
+            var tokenClientTelegram = document.getElementById("tokenFirebase").value;
+            if(!idClientTelegram && !tokenClientTelegram){
+                console.error("Insert idClientTelegram and tokenClientTelegram");
+                printError("Insert idClientTelegram and tokenClientTelegram"); // DOM visualizated
+                return;
+            }
+            apiSitter = new ApiSitter();
+
+            apiSitter.setClientTelegramAuthParameters(idClientTelegram, tokenClientTelegram);
+
+            apiSitter.callApi("POST", "contacts.getContacts", {hash: ""}, function (err, res, body) {
+                console.log("-------------- client caller ------------------");
+                if(err || res != 200){
+                    console.error("CALL METHOD: contacts.getContacts");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                }else{
+                    console.log("CALL METHOD: contacts.getContacts");
+                    console.log("RESPONSE CODE: " + res.status);
+                    try{
+                        console.log("RESPONSE BODY: %o", body);
+                        list_users = body.users.list;
+                        loadListOfContacts(body); // DOM visualization
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML = body;
+                        printError("No valid response object"); // DOM visualization
+                        return;
+                    }
+
+                }
+                console.log("-----------------------------------------------");
+                hideLoading(); // DOM visualization
+            });
+        };
+
+        // load list of contacts in DOM
+        var loadListOfContacts = function(body){
+            var container = document.getElementById("contacts");
+            container.innerHTML = "";
+            var contacts = body.users.list;
+            for(var i=0; i<contacts.length; i++){
+                container.innerHTML += '<input class="contact" style="margin-right: 10px; margin-left: 10px" type="checkbox" value="' + i + '" onchange="countContacts()">';
+                container.innerHTML += '<span>' + (contacts[i].first_name || "") + ' ' + (contacts[i].last_name || "") +' </span>';
+                container.innerHTML += '<br><hr>';
+            }
+        };
+
+        // Call the "contacts.deleteContacts" API after you properly compile the required data
+        var deleteContacts = function(){
+            showLoading(); // DOM visualization
+
+            var elements = document.getElementsByClassName("contact");
+            var users = new Array();
+            for(var i=0; i<elements.length; i++){
+                if(elements[i].checked){
+                    var user = list_users[parseInt(elements[i].value)];
+                    users.push({
+                        _typeName: "inputUser",
+                        user_id: user.id,
+                        access_hash: user.access_hash
+                    });
+                }
+            }
+
+            if(users.length < 1){
+                console.error("You must at least select a contact to be deleted");
+                printError("You must at least select a contact to be deleted"); // DOM visualization
+                return;
+            }
+
+            apiSitter.callApi("POST", "contacts.deleteContacts", {
+                id: users
+            }, function(err, res, body){
+                if(err){
+                    console.error("CALL METHOD: contacts.deleteContacts");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                } else{
+                    console.log("CALL METHOD: contacts.deleteContacts");
+                    console.log("RESPONSE CODE: " + res.status);
+                    try{
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML = JSON.stringify(body, undefined, 2);
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                    }
+                    hideLoading(); // DOM visualization
+                }
+            });
+        };
+
+        // AUSILIARY --> print selected members counter in DOM
+        var countContacts = function(){
+            var contacts = document.getElementsByClassName('contact');
+            var count = 0;
+            for(var i=0; i<contacts.length; i++){
+                if(contacts[i].checked){
+                    count++;
+                }
+            }
+            document.getElementById('contacts_counter').innerText = "" + count;
+        };
+
+        // AUSILIARY --> print error in DOM
+        var printError = function(text){
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            var start = document.getElementById("start");
+            error.innerText = text;
+            loading.style.display = "none";
+            error.style.display = "block";
+            start.style.display = "block";
+        };
+
+        // AUSILIARY --> show loading in the DOM
+        var showLoading = function(){
+            var start = document.getElementById("start");
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            start.style.display = "none";
+            error.style.display = "none";
+            loading.style.display = "block";
+        };
+
+        // AUSILIARY --> hide loading in the DOM
+        var hideLoading = function(){
+            var start = document.getElementById("start");
+            var loading = document.getElementById("loading");
+            start.style.display = "block";
+            loading.style.display = "none";
+        };
+
+    </script>
+</head>
+<body style="font-family: Sans-serif">
+<h2 style="margin-bottom: 0px">Api-sitter - contacts.deleteContacts</h2>
+<span>Is used to delete contacts from you list</span>
+<br><br>
+<form>
+    Id telegram<br>
+    <input id="idTelegram" type="text" name="idTelegram" style="width: 250px">
+    <br>
+    Token<br>
+    <input id="tokenFirebase" type="text" name="tokenFirebase" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="startApiSitter()">Start</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<hr>
+<p>Also open the console of your browser to better view the objects</p>
+<div>
+    <span>Number of ontacts selected to delete: </span><span id="contacts_counter">0</span>
+    <br>
+    <button onclick="deleteContacts()">Delete Contacts</button>
+</div>
+<div style="float: left; width: 45%; margin-right: 10%">
+    <h3>list of your contacts - select the contacts to delete</h3>
+    <div id="contacts" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px; padding-top: 8px"></div>
+</div>
+<div style="float: left; width: 45%;">
+    <h3>Response</h3>
+    <pre id="response" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px"></pre>
+</div>
+</body>
+</html>

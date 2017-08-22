@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ApiSitter - upload.getFile</title>
+    <script src="../../sdk/apisitter_telegram_sdk.min.js"></script>
+    <script>
+        var apiSitter;
+        var list_users; // container of all users
+        var list_messages = new Array(); // caintainer of all messages received on socket
+
+        var startApiSitter = function(){
+            showLoading(); // DOM visualization
+
+            var idClientTelegram = document.getElementById("idTelegram").value;
+            var tokenClientTelegram = document.getElementById("tokenFirebase").value;
+            if(!idClientTelegram && !tokenClientTelegram){
+                console.error("Insert idClientTelegram and tokenClientTelegram");
+                printError("Insert idClientTelegram and tokenClientTelegram"); // DOM visualizated
+                return;
+            }
+            apiSitter = new ApiSitter();
+            apiSitter.setClientTelegramAuthParameters(idClientTelegram, tokenClientTelegram);
+
+            console.log("-------------- client caller ------------------");
+            // need list of all contacts to determinate who send message with association id (user) == from_id (message)
+            apiSitter.callApi("POST", "contacts.getContacts", {hash: ""},function (err, res, body) {
+                if(err || res != 200){
+                    console.error("CALL METHOD: contacts.getContacts");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                } else{
+                    console.log("CALL METHOD: contacts.getContacts");
+                    console.log("RESPONSE CODE: " + res.status);
+                    try{
+                        list_users = body.users.list;
+                        console.log("RESPONSE BODY: %o", body);
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML = body;
+                    }
+                    openSocket(); // now we can open socket
+                }
+                console.log("-----------------------------------------------");
+                hideLoading(); // DOM visualization
+            });
+
+
+        };
+
+        // Open socket
+        var openSocket = function(){
+            apiSitter.openUpdatesListener(function(event, data){
+                switch(event){
+                    case 'onConnect':
+                        console.log("onConnect");
+                        break;
+                    case 'onUpdate':
+                        console.log("onUpdate %o", data);
+                        handleUpdateNewMessage(data); // manage data received
+                        break;
+                    case 'onError':
+                        console.error("SOCKET ERROR: " + error);
+                        if(data) console.error("SOCKET ERROR BODY: %o", data);
+                        printError(error); // DOM visualization
+                        break;
+                    case 'onDisconnect':
+                        console.log("onDisconnect");
+                        break;
+                }
+            });
+        };
+
+        // Check if there is a updateNewMessage and then print it
+        var handleUpdateNewMessage = function(data){
+            if(data._typeName == "updates"){
+                var updates = data.updates.list;
+                for(var i=0; i<updates.length; i++){
+                    if(updates[i]._typeName == "updateNewMessage"){
+                        printMessageReceived(updates[i].message, updates[i].message.from_id);
+                    }
+                }
+            }else if(data._typeName == "updateShortMessage"){
+                printMessageReceived(data, data.user_id);
+            }
+        };
+
+        var filename; // container of file name if it exists
+
+        // Print message in the DOM.
+        // If a message contains a photo or document, then a button will be entered to begin downloading
+        var printMessageReceived = function(message, from_id){
+            var container = document.getElementById("messages");
+            var user = getUserMessageAuthor(from_id);
+            var msg = message.message;
+            list_messages.push(message);
+            if(message.media){
+                msg = "Media Unsupported";
+                if(message.media.photo){
+                    msg = "Media Photo <button type='button' onclick='donwloadFile(" + (list_messages.length - 1) + ")'>Download</button>";
+                }
+                if(message.media.document){
+                    filename = get_filename(message.media.document.attributes);
+                    msg = (filename || "Media document") + " <button type='button' onclick='donwloadFile(" + (list_messages.length - 1) + ")'>Download</button>";
+                }
+            }
+            var author = "Unknow";
+            if(user){
+                author = (user.first_name || "") + " " + (user.last_name || "");
+            }
+            container.innerHTML += '<b style="padding-left: 10px">' + author + '</b> --> ' + msg;
+            container.innerHTML += '<span style="float: right; padding-right: 10px">[' + new Date(message.date) + ']</span><hr>';
+        };
+
+        // Get the user corresponding with message.from_id. The author of text message
+        var getUserMessageAuthor = function(from_id){
+            for(var i=0; i<list_users.length; i++){
+                if(list_users[i].id == from_id){
+                    return list_users[i];
+                }
+            }
+            return null;
+        };
+
+        var size_file_part = 131072; // number of bytes in a single uploads.saveFilePart. It must be a power of 2
+
+        // Starts the download process
+        var donwloadFile = function(messageIndex){
+            file_buffer = new Array(); // Initialization of the total file bytes container
+            var file, size, location, mime_type, media_type;
+
+            if(list_messages[messageIndex].media.photo){
+                // If the download media is a photo
+                file = list_messages[messageIndex].media.photo;
+                var photo_size = file.sizes.list[file.sizes.list.length - 1];
+                for(var i=0; i<file.sizes.list.length; i++){
+                    if(file.sizes.list[i].type == "m"){
+                        photo_size = file.sizes.list[i];
+                        break;
+                    }
+                }
+                size = photo_size.size;
+                location = photo_size.location;
+                mime_type = null;
+                media_type = "photo";
+            }else{
+                // If the download media is a document
+                file = list_messages[messageIndex].media.document;
+                size = file.size;
+                location = {
+                    dc_id: file.dc_id,
+                    id: file.id,
+                    access_hash: file.access_hash,
+                    version: file.version
+                };
+                mime_type = file.mime_type;
+                media_type = "document";
+            }
+
+            var total_of_parts = Math.ceil(size / size_file_part); // Calculate the number of parts that are to be sent
+            document.getElementById("response").innerHTML = "Starting download file"; // DOM visualization
+            getFile(total_of_parts, 0, media_type, location, mime_type); // Start the process by requesting the first part file
+        };
+
+        var file_buffer; // container of all bytes downloaded
+
+        // Call API upload.getFile to receive a portion of a file
+        var getFile = function(total_of_parts, count_part, media_type, location, mime_type){
+            console.log("-------------- client caller ------------------");
+            // Create a specific type of location. inputFileLocation if it is a photo, inputDocumentFileLocation if it is a document
+            var input_location;
+            if(media_type == "document"){
+                input_location = {
+                    _typeName: "inputDocumentFileLocation",
+                    id: location.id,
+                    access_hash: location.access_hash,
+                    version: location.version
+                }
+            }else{
+                input_location = {
+                    _typeName: "inputFileLocation",
+                    volume_id: location.volume_id,
+                    local_id: location.local_id,
+                    secret: location.secret
+                }
+            }
+
+            var parameter = {
+                location: input_location,
+                offset: (count_part * size_file_part),
+                limit: size_file_part
+            };
+            // call upload.getFile
+            apiSitter.callApi("POST", "upload.getFile/" + location.dc_id, parameter, function (err, res, body) {
+                if(err || res != 200){
+                    console.error("CALL METHOD: upload.getFile");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                    document.getElementById("response").innerHTML += "<br>Error"; // DOM visualization
+                    return;
+                } else{
+                    console.log("CALL METHOD: upload.getFile/" + location.dc_id + " %o", parameter);
+                    console.log("RESPONSE CODE: " + res.status);
+                    try{
+                        console.log("RESPONSE BODY: %o", body);
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        console.error("Invalid object returned from getFile");
+                        printError("Invalid object returned from getFile"); // DOM visualization
+                        document.getElementById("response").innerHTML += "<br>Error"; // DOM visualization
+                        return;
+                    }
+                    for(var i=0; i<body.bytes.data.length; i++){
+                        file_buffer.push(body.bytes.data[i]);
+                    }
+                    console.log("Downloaded part " + count_part + "/" + total_of_parts + " completed");
+                    document.getElementById("response").innerHTML += "<br>Loading part " + (count_part + 1) + "/" + total_of_parts + " completed"; // DOM visualization
+                    if((total_of_parts - 1) > count_part){
+                        // this getFile not receive the last file portion and need to call the next getFile
+                        console.log("-----------------------------------------------");
+                        getFile(total_of_parts, count_part + 1, media_type, location, mime_type);
+                    }else{
+                        // this getFile is the last
+                        console.log("All parts donwloaded");
+                        document.getElementById("response").innerHTML += "<br>All parts loaded"; // DOM visualization
+                        console.log("-----------------------------------------------");
+                        saveFile(mime_type); // Obtain a blob from buffer and makes it available to the DOM
+                    }
+                }
+            });
+        };
+
+        // Open the file saver passing the data downloaded
+        var saveFile = function(fileType){
+            // obtain a blob (if it is a media photo the mime_type is image/jpeg)
+            var blob = new Blob([new Uint8Array(file_buffer)], {type: (fileType || 'image/jpeg')});
+            var url = window.URL.createObjectURL(blob); // obtain a valid url
+            console.log(url);
+            console.log(fileType);
+            if(!fileType){
+                document.getElementById("response").innerHTML += "<br><img src='" + url + "'>"; // DOM visualization
+            } else{
+                document.getElementById("response").innerHTML += "<br><a href='" + url + "' download='" + (filename || "test") + "'>Open document</a>"; // DOM visualization
+            }
+        };
+
+        // Returns the name of the file specified in the "documentAttributeFilename" attribute, otherwise null
+        var get_filename = function(attributes){
+            if(!attributes) return null;
+            for(var i=0; i<attributes.list.length; i++){
+                if(attributes.list[i]._typeName == "documentAttributeFilename"){
+                    return attributes.list[i].file_name;
+                }
+            }
+            return null;
+        };
+
+        // AUSILIARY --> print error in DOM
+        var printError = function(text){
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            var start = document.getElementById("start");
+            error.innerText = text;
+            loading.style.display = "none";
+            error.style.display = "block";
+            start.style.display = "block";
+        };
+
+        // AUSILIARY --> show loading in the DOM
+        var showLoading = function(){
+            var start = document.getElementById("start");
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            start.style.display = "none";
+            error.style.display = "none";
+            loading.style.display = "block";
+        };
+
+        // AUSILIARY --> hide loading in the DOM
+        var hideLoading = function(){
+            var start = document.getElementById("start");
+            var loading = document.getElementById("loading");
+            start.style.display = "block";
+            loading.style.display = "none";
+        };
+
+    </script>
+</head>
+<body style="font-family: Sans-serif">
+<h2 style="margin-bottom: 0px">Test ApiSitter upload.getFile from media message</h2>
+<span>After receiving a media on the socket, you can start downloading the entire file using the specific button
+</span>
+<br><br>
+<form>
+    idClientTelegram<br>
+    <input id="idTelegram" type="text" name="idTelegram" style="width: 250px">
+    <br>
+    tokenClientTelegram<br>
+    <input id="tokenFirebase" type="text" name="tokenFirebase" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="startApiSitter()">Start</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<hr>
+<p>Also open the console of your browser to better view the objects</p>
+Send a media to your number using a Telegram app to see the list of messages updated and try downloading
+<div style="float: left; width: 45%; margin-right: 10%">
+    <h3>List of messages received after start - Click on "Download" to download a supported media</h3>
+    <div id="messages" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px; padding-top: 5px"></div>
+</div>
+<div style="float: left; width: 45%;">
+    <h3>Response</h3>
+    <div id="response" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px; padding: 5px"></div>
+</div>
+</body>
+</html>
