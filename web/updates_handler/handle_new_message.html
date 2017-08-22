@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ApiSitter - handler received text messages on socket</title>
+    <script src="../sdk/apisitter_telegram_sdk.min.js"></script>
+    <script>
+        var apiSitter;
+        var users;
+
+        var startSocket = function(){
+            showLoading(); // DOM visualization
+            document.getElementById("response").innerHTML = "";
+
+            var idClientTelegram = document.getElementById("idTelegram").value;
+            var tokenClientTelegram = document.getElementById("tokenFirebase").value;
+            if(!idClientTelegram && !tokenClientTelegram){
+                console.error("Insert idClientTelegram and tokenClientTelegram");
+                printError("Insert idClientTelegram and tokenClientTelegram"); // DOM visualizated
+                return;
+            }
+            apiSitter = new ApiSitter();
+
+            apiSitter.setClientTelegramAuthParameters(idClientTelegram, tokenClientTelegram);
+
+            console.log("-------------- client caller ------------------");
+            // need list of all contacts to determinate who send message with association id (user) == from_id (message)
+            apiSitter.callApi("POST", "contacts.getContacts", {hash: ""}, function (err, res, body) {
+                if(err || res != 200){
+                    console.error("CALL METHOD: contacts.getContacts");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                }else{
+                    console.log("CALL METHOD: contacts.getContacts");
+                    console.log("RESPONSE CODE: " + res.status);
+                    try{
+                        users = body.users.list;
+                        console.log("RESPONSE BODY: %o", body);
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML = body;
+                    }
+                }
+                console.log("-----------------------------------------------");
+                hideLoading(); // DOM visualization
+            });
+
+            console.log("-------------- client socket ------------------");
+            apiSitter.openUpdatesListener(function(event, data){
+                switch(event){
+                    case 'onConnect':
+                        console.log("onConnect");
+                        break;
+                    case 'onUpdate':
+                        console.log("SOCKET RECEIVED DATA: %o", data);
+                        handleUpdateNewMessage(data);
+                        break;
+                    case 'onError':
+                        console.error("SOCKET ERROR: " + error);
+                        if(data) console.error("SOCKET ERROR BODY: %o", data);
+                        printError(error); // DOM visualization
+                    case 'onDisconnect':
+                        console.log("onDisconnect");
+                        break;
+                }
+                console.log("-----------------------------------------------");
+            });
+        };
+
+        // Get the user corresponding with message.from_id. The author of text message
+        var getUserMessageAuthor = function(from_id){
+            for(var i=0; i<users.length; i++){
+                if(users[i].id == from_id){
+                    return users[i];
+                }
+            }
+            return null;
+        };
+
+        // Check if there is a updateNewMessage and then print it
+        var handleUpdateNewMessage = function(data){
+            if(data._typeName == "updates"){
+                var updates = data.updates.list;
+                for(var i=0; i<updates.length; i++){
+                    if(updates[i]._typeName == "updateNewMessage"){
+                        printMessageReceived(updates[i].message, updates[i].message.from_id);
+                    }
+                }
+            }else if(data._typeName == "updateShortMessage"){
+                printMessageReceived(data, data.user_id);
+            }
+
+        };
+
+        // Print message in the DOM
+        var printMessageReceived = function(message, from_id){
+            var container = document.getElementById("response");
+            var user = getUserMessageAuthor(from_id);
+            var msg = message.message;
+            if(message.media){
+                msg = "Media Received";
+            }
+            var author = "Unknow";
+            if(user){
+                author = (user.first_name || "") + " " + (user.last_name || "");
+            }
+            container.innerHTML += '<b style="padding-left: 10px">' + author + '</b> --> ' + msg;
+            container.innerHTML += '<span style="float: right; padding-right: 10px">[' + new Date(message.date) + ']</span><hr>';
+        };
+
+        // AUSILIARY --> print error in DOM
+        var printError = function(text){
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            var start = document.getElementById("start");
+            error.innerText = text;
+            loading.style.display = "none";
+            error.style.display = "block";
+            start.style.display = "block";
+        };
+
+        // AUSILIARY --> show loading in the DOM
+        var showLoading = function(){
+            var start = document.getElementById("start");
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            start.style.display = "none";
+            error.style.display = "none";
+            loading.style.display = "block";
+        };
+
+        // AUSILIARY --> hide loading in the DOM
+        var hideLoading = function(){
+            var start = document.getElementById("start");
+            var loading = document.getElementById("loading");
+            start.style.display = "block";
+            loading.style.display = "none";
+        };
+
+    </script>
+</head>
+<body style="font-family: Sans-serif">
+<h2 style="margin-bottom: 0px">Test ApiSitter handler received text messages on socket</h2>
+<span>Starts socket and write messages received</span>
+<br><br>
+<form>
+    idClientTelegram<br>
+    <input id="idTelegram" type="text" name="idTelegram" style="width: 250px">
+    <br>
+    tokenClientTelegram<br>
+    <input id="tokenFirebase" type="text" name="tokenFirebase" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="startSocket()">Start Socket</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<hr>
+<p>Also open the console of your browser to better view the objects</p>
+<div style="float: left; width: 100%">
+    <h3>Text Messages Received - Send a message to your number to receive it in this section</h3>
+    <div id="response" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px; padding-top: 5px"></div>
+</div>
+</body>
+</html>

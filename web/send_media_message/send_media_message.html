@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ApiSitter - messages.sendMedia</title>
+    <script src="../sdk/apisitter_telegram_sdk.min.js"></script>
+    <script>
+        var apiSitter;
+        var list_users; // container of all users
+
+        var startApiSitter = function(){
+            showLoading(); // DOM visualization
+
+            var idClientTelegram = document.getElementById("idTelegram").value;
+            var tokenClientTelegram = document.getElementById("tokenFirebase").value;
+            if(!idClientTelegram && !tokenClientTelegram){
+                console.error("Insert idClientTelegram and tokenClientTelegram");
+                printError("Insert idClientTelegram and tokenClientTelegram"); // DOM visualizated
+                return;
+            }
+            apiSitter = new ApiSitter();
+
+            apiSitter.setClientTelegramAuthParameters(idClientTelegram, tokenClientTelegram);
+
+            console.log("-------------- client caller ------------------");
+            apiSitter.callApi("POST", "contacts.getContacts", {hash: ""}, function (err, res, body) {
+                if(err || res != 200){
+                    console.error("CALL METHOD: contacts.getContacts");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                }else{
+                    console.log("CALL METHOD: contacts.getContacts");
+                    console.log("RESPONSE CODE: " + res.status);
+                    try{
+                        console.log("RESPONSE BODY: %o", body);
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML = body;
+                        printError("No valid response object"); // DOM visualization
+                        return;
+                    }
+                    list_users = body.users.list;
+                    loadListOfContacts(body); // DOM visualization
+                }
+                console.log("-----------------------------------------------");
+                hideLoading(); // DOM visualization
+            });
+        };
+
+        // load list of contacts in DOM
+        var loadListOfContacts = function(body){
+            var container = document.getElementById("contacts");
+            container.innerHTML = "";
+            var contacts = body.users.list;
+            for(var i=0; i<contacts.length; i++){
+                container.innerHTML += '<span style="margin-right: 10px; margin-left: 10px">' + (contacts[i].first_name || "") + ' ' + (contacts[i].last_name || "") +' </span>';
+                container.innerHTML += '<button style="float: right; margin-right: 10px" onclick="startSendMediaProcess(' + i + ')">Send Media</button>';
+                container.innerHTML += '<br><hr>';
+            }
+        };
+
+        var file; // file container
+
+        // Called after image selection and starts the upload file process
+        function handleFileSelect(evt) {
+            file = evt.target.files[0];
+        }
+
+        var user_receiver; // Object of the user that will receive the file
+
+        // Called after click on button associated to a specific users (receiver of this media)
+        var startSendMediaProcess = function(user_index){
+            user_receiver = list_users[user_index]; // select the user object target
+            if(!file){
+                console.error("Select a file");
+                printError("Select a file"); // DOM visualization
+                return;
+            }
+            if(file.size > 10000000){
+                console.error("File too big");
+                printError("File too big"); // DOM visualization
+                return;
+            }
+            var reader = new FileReader();
+            reader.onload = function(event) {
+                document.getElementById("response").innerHTML = "Starting process sendFilePart"; // DOM visualization
+                var bytes = Array.from(new Uint8Array(event.target.result));
+//                manageFilePart(bytes);
+                var onProgress = function(fileId, partsCompleted, numberOfParts){
+//                    console.log(partsCompleted + "/" + numberOfParts);
+                    console.log("Loading part " + partsCompleted + "/" + numberOfParts + " completed");
+                    document.getElementById("response").innerHTML += "<br>Loading part " + partsCompleted + "/" + numberOfParts + " completed"; // DOM visualization
+                }
+                apiSitter.uploadFile(bytes, onProgress, function (err, data) {
+                    if(err){
+                        console.error("CALL METHOD: upload.saveFilePart");
+                        console.error("RESPONSE ERROR: " + err);
+                        if(res) console.error("RESPONSE CODE: " + res.status);
+                        if(body) console.error("RESPONSE BODY: " + body);
+                        printError(err); // DOM visualization
+                        document.getElementById("response").innerHTML += "<br>Error"; // DOM visualization
+                    }else{
+                        sendMedia(data.parts, data.id);
+                    }
+                })
+            };
+            reader.readAsArrayBuffer(file);
+        };
+
+        // Call API messages.sendMedia to send the uploaded file to the target peer
+        var sendMedia = function(total_of_parts, file_id){
+            console.log("-------------- client caller ------------------");
+            var data = {
+                peer: {
+                    _typeName: "inputPeerUser",
+                    access_hash: user_receiver.access_hash,
+                    user_id: user_receiver.id
+                },
+                media: {
+                    _typeName: "inputMediaUploadedDocument",
+                    attributes: [
+                        {
+                            _typeName: "documentAttributeFilename",
+                            file_name: file.name
+                        }
+                    ],
+                    file: {
+                        _typeName: "inputFile",
+                        id: file_id,
+                        md5_checksum: "",
+                        parts: total_of_parts,
+                        name: file.name
+                    },
+                    caption: "",
+                    stickers: null,
+                    mime_type: file.type
+                },
+                random_id: new Date().getTime(), // generated random number
+                reply_to_msg_id: null,
+                reply_markup: null,
+                silent: null,
+                background: null,
+                clear_draft: null
+            };
+            console.log(data);
+            apiSitter.callApi("POST", "messages.sendMedia", data, function (err, res, body) {
+                if(err || res != 200){
+                    console.error("CALL METHOD: messages.sendMedia");
+                    console.error("RESPONSE ERROR: " + err);
+                    if(res) console.error("RESPONSE CODE: " + res.status);
+                    if(body) console.error("RESPONSE BODY: " + body);
+                    printError(err); // DOM visualization
+                    document.getElementById("response").innerHTML += "<br>Error"; // DOM visualization
+                    return;
+                } else{
+                    console.log("CALL METHOD: messages.sendMedia");
+                    console.log("RESPONSE CODE: " + res.status);
+                    document.getElementById("response").innerHTML += "<br>Media sent"; // DOM visualization
+                    try{
+                        console.log("RESPONSE BODY: %o", body);
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML = body;
+                    }
+                }
+                console.log("-----------------------------------------------");
+            });
+        };
+
+        // AUSILIARY --> print error in DOM
+        var printError = function(text){
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            var start = document.getElementById("start");
+            error.innerText = text;
+            loading.style.display = "none";
+            error.style.display = "block";
+            start.style.display = "block";
+        };
+
+        // AUSILIARY --> show loading in the DOM
+        var showLoading = function(){
+            var start = document.getElementById("start");
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            start.style.display = "none";
+            error.style.display = "none";
+            loading.style.display = "block";
+        };
+
+        // AUSILIARY --> hide loading in the DOM
+        var hideLoading = function(){
+            var start = document.getElementById("start");
+            var loading = document.getElementById("loading");
+            start.style.display = "block";
+            loading.style.display = "none";
+        };
+    </script>
+</head>
+<body style="font-family: Sans-serif">
+<h2 style="margin-bottom: 0px">Test ApiSitter messages.sendMedia and its process (uploads.saveFilePart)</h2>
+<span>Load all the file split into smaller packages and then send the message with the reference to the file you just uploaded</span>
+<br><br>
+<form>
+    idClientTelegram<br>
+    <input id="idTelegram" type="text" name="idTelegram" style="width: 250px">
+    <br>
+    tokenClientTelegram<br>
+    <input id="tokenFirebase" type="text" name="tokenFirebase" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="startApiSitter()">Start</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<hr>
+<p>Also open the console of your browser to better view the objects</p>
+Select file to upload and send from your local storage
+<div>
+    <input type="file" id="files" name="files[]" onchange="handleFileSelect(event)" />
+    <output id="list"></output>
+</div>
+<div style="float: left; width: 45%; margin-right: 10%">
+    <h3>List of all your contacts - Click on "Send Media" to send media to the selected contacts</h3>
+    <div id="contacts" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px; padding-top: 5px"></div>
+</div>
+<div style="float: left; width: 45%;">
+    <h3>Response</h3>
+    <div id="response" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px; padding: 5px"></div>
+</div>
+</body>
+</html>
