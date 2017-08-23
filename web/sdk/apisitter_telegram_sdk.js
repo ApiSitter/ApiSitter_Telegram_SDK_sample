@@ -38,7 +38,7 @@ function ApiSitter() {
     //      result,     200, 400, 303 codice di errore della chiamata
     //      body        l'oggetto/stringa di risposta
     // )
-    this.sendCode = function(apiSitterEmail, apiSitterToken, phone, dialCode, callback){
+    this.sendCodeForCreateClient = function(apiSitterEmail, apiSitterToken, phone, dialCode, callback){
         try{
             if(!apiSitterEmail || !apiSitterToken){
                 //return error = 0 - input error
@@ -290,24 +290,24 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
                 let aus;
                 await Promise.all(calls).then(
                     values => {
-                        aus = values;
-                        console.log(values);
-                        for(let i=0; i<values.length; i++){
-                            if(values[i].bytes.data.length <=0){
-                                finished = true;
-                            }else{
-                                console.log(values[i].bytes.data.length);
-                                for(let j=0; j<values[i].bytes.data.length; j++){
-                                    bytes.push(values[i].bytes.data[j]);
-                                }
-                                body = values[i];
-                                body.bytes.data = bytes;
-                            }
+                    aus = values;
+                console.log(values);
+                for(let i=0; i<values.length; i++){
+                    if(values[i].bytes.data.length <=0){
+                        finished = true;
+                    }else{
+                        console.log(values[i].bytes.data.length);
+                        for(let j=0; j<values[i].bytes.data.length; j++){
+                            bytes.push(values[i].bytes.data[j]);
                         }
-                    }).catch (reason => {
+                        body = values[i];
+                        body.bytes.data = bytes;
+                    }
+                }
+            }).catch (reason => {
                     console.error(reason);
-                    inError = true;
-                });
+                inError = true;
+            });
                 console.log("END DOWNLOAD 5 CALL ---> execution time " + (new Date().getTime() - date) + " ms");
                 if(inError){
                     return callback("GENERIC_ERROR_IN_METHOD")
@@ -424,11 +424,11 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
                 }
                 await Promise.all(calls).then(
                     values => {
-                        console.log(values);
-                    }).catch (reason => {
+                    console.log(values);
+            }).catch (reason => {
                     console.error(reason);
-                    inError = true;
-                });
+                inError = true;
+            });
                 console.log("END TEST ---> execution time " + (new Date().getTime() - date) + " ms");
                 if(inError){
                     return callback("GENERIC_ERROR_IN_METHOD")

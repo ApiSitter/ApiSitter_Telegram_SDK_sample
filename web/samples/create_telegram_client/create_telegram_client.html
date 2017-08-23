@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ApiSitter - create Telegram client</title>
+    <script src="../../sdk/apisitter_telegram_sdk.min.js"></script>
+    <script>
+        var apiSitter;
+        var phone_code_hash;
+        var phone_number;
+
+        var startApiSitter = function(){
+            showLoading(); // DOM visualization
+
+            var apiSitterEmail = document.getElementById("apiSitterEmail").value;
+            var apiSitterToken = document.getElementById("apiSitterToken").value;
+            if(!apiSitterEmail || !apiSitterToken){
+                console.error("Insert apiSitterEmail and a apiSitterToken");
+                printError("Insert apiSitterEmail and a apiSitterToken"); // DOM visualizated
+                return;
+            }
+
+            var phoneNumber = document.getElementById("phoneNumber").value;
+            var dialCode = document.getElementById("dialCode").value;
+            if(!phoneNumber || !dialCode){
+                console.error("Insert complete phone number and a valid dial code");
+                printError("Insert complete phone number and a valid dial code"); // DOM visualizated
+                return;
+            }
+            apiSitter = new ApiSitter();
+
+            apiSitter.sendCodeForCreateClient(apiSitterEmail, apiSitterToken, phoneNumber, dialCode, function(error, result, body){
+                hideLoading(); // DOM visualization
+                if(error || result != 200){
+                    console.error("Error in sendCode()");
+                    printError("Error in sendCode()"); // DOM visualization
+                    document.getElementById("response").innerHTML += "SendCode() error!\n"
+                }else{
+                    try{
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML += JSON.stringify(body, undefined, 2) + "\n";
+                    }catch(e){
+                        console.log("RESPONSE BODY: %o", body);
+                        document.getElementById("response").innerHTML += body + "\n";
+                    }
+                    // hide the form for sendCode and show the next form for insert code (signIn or signUp)
+                    document.getElementById("sendCodeForm").style.display = "none";
+                    if(body.phone_registered == true){
+                        // show siignIn because the phone number is registered
+                        document.getElementById("signInForm").style.display = "block";
+                    }else{
+                        // show signUp bacause the phone number isn't registered
+                        document.getElementById("signUpForm").style.display = "block";
+                        phone_number = phoneNumber; // necessary only for signUp
+                    }
+                    phone_code_hash = body.phone_code_hash; // necessary for signIn/signUp
+                }
+            });
+        };
+
+        var signIn = function(){
+            showLoading(); // DOM visualization
+            var code = document.getElementById("signIn_code").value;
+            if(!code){
+                console.error("Insert received code");
+                printError("Insert received code"); // DOM visualizated
+                return;
+            }
+            apiSitter.callApi("GET", "signIn/" + phone_code_hash + "/" + code, null, function (error, result, body) {
+                hideLoading(); // DOM visualization
+                if(error != null || result != 200){
+                    // Error in method
+                    console.error("Error in signIn()");
+                    printError("Error in signIn()"); // DOM visualization
+                    document.getElementById("response").innerHTML += "SignIn error!\n"
+                }else{
+                    // Success
+                    console.log("RESPONSE BODY: %o", body);
+                    document.getElementById("response").innerHTML += "SignIn success!\n"
+                }
+            }, null);
+        }
+
+        var signUp = function(){
+            var code = document.getElementById("signUp_code").value;
+            var firstName = document.getElementById("firstName").value;
+            var secondName = document.getElementById("secondName").value;
+            if(!code || !firstName ){
+                console.error("Insert received code, first name and second name");
+                printError("Insert received code, first name and second name"); // DOM visualizated
+                return;
+            }
+            var data = {
+                phone_number: phone_number,
+                phone_code_hash: phone_code_hash,
+                phone_code: code,
+                firstName: firstName,
+                secondName: secondName
+            };
+            apiSitter.callApi("POST", "auth.signUp", data, function (error, result, body) {
+                hideLoading(); // DOM visualization
+                if(error != null || result != 200){
+                    // Error in method
+                    console.error("Error in signUp()");
+                    printError("Error in signUp()"); // DOM visualization
+                    document.getElementById("response").innerHTML += "SignUp error!\n"
+                }else{
+                    // Success
+                    console.log("RESPONSE BODY: %o", body);
+                    document.getElementById("response").innerHTML += "signUp success!\n"
+                }
+            }, null);
+        }
+
+        // AUSILIARY --> print error in DOM
+        var printError = function(text){
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            var start = document.getElementById("start");
+            error.innerText = text;
+            loading.style.display = "none";
+            error.style.display = "block";
+            start.style.display = "block";
+        };
+
+        // AUSILIARY --> show loading in the DOM
+        var showLoading = function(){
+            var start = document.getElementById("start");
+            var error = document.getElementById("error");
+            var loading = document.getElementById("loading");
+            start.style.display = "none";
+            error.style.display = "none";
+            loading.style.display = "block";
+        };
+
+        // AUSILIARY --> hide loading in the DOM
+        var hideLoading = function(){
+            var start = document.getElementById("start");
+            var loading = document.getElementById("loading");
+            start.style.display = "block";
+            loading.style.display = "none";
+        };
+    </script>
+</head>
+<body style="font-family: Sans-serif">
+<h2 style="margin-bottom: 0px">Test ApiSitter create Telegram client</h2>
+<br><br>
+<form id="sendCodeForm">
+    apiSitterEmail<br>
+    <input id="apiSitterEmail" type="text" name="apiSitterEmail" style="width: 250px">
+    <br>
+    apiSitterToken<br>
+    <input id="apiSitterToken" type="text" name="apiSitterToken" style="width: 250px">
+    <br>
+    phoneNumber (complet with dial code: 0044...)<br>
+    <input id="phoneNumber" type="text" name="phoneNumber" style="width: 250px">
+    <br>
+    dialCode (0044)<br>
+    <input id="dialCode" type="text" name="dialCode" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="startApiSitter()">Start</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<form id="signInForm" style="display: none">
+    <h3>SignIn</h3>
+    Code received on your phone<br>
+    <input id="signIn_code" type="text" name="signIn_code" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="signIn()">Sign in</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<form id="signUpForm" style="display: none">
+    <h3>SignUp</h3>
+    Code received on your phone<br>
+    <input id="signUp_code" type="text" name="signUp_code" style="width: 250px">
+    <br>
+    First name<br>
+    <input id="firstName" type="text" name="firstName" style="width: 250px">
+    <br>
+    Second name<br>
+    <input id="secondName" type="text" name="secondName" style="width: 250px">
+    <br><br>
+    <div id="start">
+        <button type="button" onclick="signUp()">Sign up</button>
+    </div>
+    <p id="loading" style="display: none">Loading...</p>
+    <p id="error" style="display: none; color: red"></p>
+</form>
+<hr>
+<p>Also open the console of your browser to better view the objects</p>
+<div style="float: left; width: 100%">
+    <h3>Response</h3>
+    <pre id="response" style="height: 600px; overflow: auto; border: 1px solid black; font-size: 11px">
+        </pre>
+</div>
+</body>
+</html>
