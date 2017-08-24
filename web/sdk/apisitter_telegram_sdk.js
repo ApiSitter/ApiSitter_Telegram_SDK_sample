@@ -177,7 +177,7 @@ function ApiSitter() {
                     });
 
                     setInterval(function() {
-                        this.socket.emit('MyPing',"-");
+                        refer.socket.emit('MyPing',"-");
                     }.bind(this),180000);
                 }
             });
