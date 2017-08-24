@@ -23,6 +23,7 @@
 
 function ApiSitter() {
 
+
     this.setClientTelegramAuthParameters = function(idClientTelegram, tokenClientTelegram){
         this.idClientTelegram = idClientTelegram.toString();
         this.tokenClientTelegram = tokenClientTelegram.toString();
@@ -149,10 +150,8 @@ function ApiSitter() {
                 if(error){
                     return callback("onError", "Internal ApiSitter error");
                 }else{
-                    console.log(data);
-                    console.log(data.url);
                     if(refer.socket){
-                        console.error("ho già un socket aperto");
+                        return callback("onError", "Socker already open")
                     }
                     refer.socket = io.connect(data.url);
 
@@ -162,22 +161,24 @@ function ApiSitter() {
                             token: refer.tokenClientTelegram
                         };
                         refer.socket.emit('autentication', auth);
-                        console.log("Socket --> connection enabled for client " + this.idClientTelegram)
-                        return callback("onConnect", "");
+                        callback("onConnect", "");
                     });
 
                     refer.socket.on('disconnect', function(){
-                        return callback("onDisconnect", null);
+                        callback("onDisconnect", null);
                     });
 
                     refer.socket.on('message', function(data){
-                        console.log("message %o", data);
-                        return callback("onUpdate", data);
+                        callback("onUpdate", data);
                     });
 
                     refer.socket.on('errorWi-Tek',function (data) {
-                        return callback("onError", data);
+                        callback("onError", data);
                     });
+
+                    setInterval(function() {
+                        this.socket.emit('MyPing',"-");
+                    }.bind(this),180000);
                 }
             });
         }catch(e){
@@ -266,11 +267,9 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
                 size = 10000000; // 10 MB
             }
             this.numberOfParts = Math.ceil(size / option.sizeFilePart);
-            console.log("NUMBER OF PARTS -----> " + this.numberOfParts);
 
             this.partsCompleted = 0;
             var numInstantCallSequenze = Math.ceil(this.numberOfParts / option.parallelDownloadParts);
-            console.log("NUMBER OF INSTANT CALLS -----> " + numInstantCallSequenze);
 
             let finished = false;
             let body;
@@ -291,12 +290,10 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
                 await Promise.all(calls).then(
                     values => {
                     aus = values;
-                console.log(values);
                 for(let i=0; i<values.length; i++){
                     if(values[i].bytes.data.length <=0){
                         finished = true;
                     }else{
-                        console.log(values[i].bytes.data.length);
                         for(let j=0; j<values[i].bytes.data.length; j++){
                             bytes.push(values[i].bytes.data[j]);
                         }
@@ -305,10 +302,8 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
                     }
                 }
             }).catch (reason => {
-                    console.error(reason);
-                inError = true;
+                    inError = true;
             });
-                console.log("END DOWNLOAD 5 CALL ---> execution time " + (new Date().getTime() - date) + " ms");
                 if(inError){
                     return callback("GENERIC_ERROR_IN_METHOD")
                 }
@@ -325,9 +320,7 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
     }
 
     this.downloadPart = function(paramters, startIndex, timeout, tryNum, maxRetry, progress){
-        console.log("START PART -----> " + startIndex);
         var refer = this;
-        console.log(paramters);
         return new Promise(function (resolve, reject) {
             var url = "https://chat.apisitter.io/apiTelegram/upload.getFile/" + this.dc_id;
             let data = JSON.stringify(paramters);
@@ -348,7 +341,6 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
                         }catch(e){
                             data = this.responseText;
                         }
-                        console.log(data);
                         refer.partsCompleted++;
                         progress(refer.partsCompleted, refer.numberOfParts);
                         resolve(data);
@@ -374,12 +366,8 @@ function DownloadFile(idCLientTelegram, tokenClientTelegram){
 
     this.getDC = function(message){
         var string="MIGRATE_";
-        console.log("sono in getDC");
-        console.log(message.search(string));
         if(message.search(string)!=-1){
-            console.log("ho errore "+string);
             var dc = parseInt(message.substring(message.search(string) + string.length, message.length));
-            console.log("nuovo dc trovato:"+dc);
             return dc;
         }
         else
@@ -392,7 +380,6 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
     this.tokenClientTelegram = tokenClientTelegram;
 
     this.uploadFile = async function(bytes, progress, callback, options){
-        console.log(JSON.stringify(bytes));
         try{
             if(bytes.length > 10000000){
                 return callback("FILE_TOO_BIG");
@@ -407,11 +394,9 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
             if(options && options.maxRetry) maxRetry = options.maxRetry;
 
             this.numberOfParts = Math.ceil(bytes.length / sizeFilePart);
-            console.log("NUMBER OF PARTS ------> " + this.numberOfParts);
 
             this.partsCompleted = 0;
             var numInstantCallSequenze = Math.ceil(this.numberOfParts / parallelUploadParts);
-            console.log(numInstantCallSequenze);
             let fileId = Math.floor((Math.random() * new Date().getTime()) + 1);
 
             for(let i=0; i<numInstantCallSequenze; i++){
@@ -424,12 +409,9 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
                 }
                 await Promise.all(calls).then(
                     values => {
-                    console.log(values);
-            }).catch (reason => {
-                    console.error(reason);
-                inError = true;
+                }).catch (reason => {
+                    inError = true;
             });
-                console.log("END TEST ---> execution time " + (new Date().getTime() - date) + " ms");
                 if(inError){
                     return callback("GENERIC_ERROR_IN_METHOD")
                 }
@@ -441,7 +423,6 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
     }
 
     this.uploadPart = function(fileId, partNum, bytes, timeout, tryNum, maxRetry, progress){
-        console.log(partNum + ". " + fileId);
         var refer = this;
         return new Promise(function (resolve, reject) {
             var url = "https://chat.apisitter.io/apiTelegram/upload.saveFilePart";
@@ -450,7 +431,6 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
                 file_part: partNum,
                 bytes: bytes
             };
-            console.log(data);
             data = JSON.stringify(data);
             var xhr = new XMLHttpRequest();
             xhr.addEventListener("readystatechange", function(){
@@ -483,7 +463,6 @@ function UploadFile(idCLientTelegram, tokenClientTelegram) {
                 }
             });
             xhr.ontimeout = function(data) {
-                console.log("ontimeout " + this.status);
                 if(tryNum < maxRetry){
                     tryNum++;
                     resolve(refer.uploadPart(fileId, partNum, bytes, timeout, tryNum, maxRetry, progress));
