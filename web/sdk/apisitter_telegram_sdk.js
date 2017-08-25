@@ -43,7 +43,7 @@ function ApiSitter() {
         try{
             if(!apiSitterEmail || !apiSitterToken){
                 //return error = 0 - input error
-                return callback(0, null, "apiSitterEmail or apiSitterToken not in input");
+                return callback("GENERIC_ERROR_API", null, "apiSitterEmail or apiSitterToken not in input");
             }
             var url = "https://chat.apisitter.io/apiTelegram/sendCode/" + phone + "/" + dialCode;
             var data = null;
@@ -92,9 +92,6 @@ function ApiSitter() {
     // options: oggetto con timeout {timeout: xxx} ed è opzionale
     this.callApi = function(requestType, apiName, parameter, callback, options){
         try{
-            if(requestType != "GET" && requestType != "POST"){
-                return callback(4, null, requestType + " id not a request type supported by ApiSitter");
-            }
             var url = "https://chat.apisitter.io/apiTelegram/" + apiName;
             if(requestType == "POST"){
                 parameter = JSON.stringify(parameter);
