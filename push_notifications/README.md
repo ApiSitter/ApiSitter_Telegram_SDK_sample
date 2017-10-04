@@ -19,6 +19,11 @@ Il server verrà aperto sulla porta **4001** e quindi, la pagina di test sarà v
 2) Sovrascrivere la variabile `config` con i valori reperibili nella console del tuo progetto firebase in **settings>Impostazioni progetto>generale**
    e cliccando, nella sezione **Le tue appplicazioni**, sulla voce **Aggiungi Firebase all'applicazione web**
    
+3) Aprire il file **/public/firebase-messaging.sw.js**
+
+4) Sovrascrivere la variabile `config` con i valori reperibili nella console del tuo progetto firebase in **settings>Impostazioni progetto>generale**
+   e cliccando, nella sezione **Le tue appplicazioni**, sulla voce **Aggiungi Firebase all'applicazione web**
+   
 ## Inviare notifiche push di test usando *curl*
 
 Digitare dal terminale il seguente comando:
