@@ -1,0 +1,12 @@
+{
+    "to": "cThUPOWSwuo:APA91bHs7lLvSBPK2EKbonm5CvsAQEwGWKgs4I1aAK5i8KGB9ZFPThZldf2HDttALDz_vPt0zsHdnvVT0FNyMztrNbdHafNWKIMo7NxJs1MRm_fIPv5aNzmhVO0AoeFZZWHLK54bo6Uu",
+    "notification": {
+        "title": "Hello",
+        "body": "World",
+        "icon": "/logo.png"
+    }
+}
+
+curl --header "Authorization: key=AAAASPdmVu8:APA91bGa6lgLBHOIPJuDqLvR95-DEURQotJlsRihGdZTR88Jnnvuh8e02UtY0U44xmZQXsEGRvJNSS4DUcoDls5T1klmpdGWDWmeOAdR7FktVaYB1EEkkAbkHsa9xdp0udBCOBqNUlFu" --header "Content-Type: application/json" -d '{"to": "cThUPOWSwuo:APA91bHs7lLvSBPK2EKbonm5CvsAQEwGWKgs4I1aAK5i8KGB9ZFPThZldf2HDttALDz_vPt0zsHdnvVT0FNyMztrNbdHafNWKIMo7NxJs1MRm_fIPv5aNzmhVO0AoeFZZWHLK54bo6Uu", "notification": {"title": "Hello", "body": "World", "icon": "/logo.png"}}' https://fcm.googleapis.com/fcm/send
+
+curl --header "Authorization: key=AAAASPdmVu8:APA91bGa6lgLBHOIPJuDqLvR95-DEURQotJlsRihGdZTR88Jnnvuh8e02UtY0U44xmZQXsEGRvJNSS4DUcoDls5T1klmpdGWDWmeOAdR7FktVaYB1EEkkAbkHsa9xdp0udBCOBqNUlFu" --header "Content-Type: application/json" -d '{"to": "ceRM8Ic7SKY:APA91bG6JgFUQ32swWuRogU2jo1Bvah2B-Aw6N4KZ6eNzdJa_AMHIGTEozJNo5QkMB4zyR1bBq3PkFmTZklV82DdUndW5Ynd-CGhYTZiHoBfHOTgZRzc7AV9LA8eRChDE58EmBLzX85F", "notification": {"title": "Hello", "body": "World", "icon": "/logo.png"}}' https://fcm.googleapis.com/fcm/send
