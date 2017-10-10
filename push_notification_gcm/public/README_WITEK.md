@@ -22,6 +22,8 @@ Nella pagina https://my.telegram.org/ bisogna entrare nella pagina della propria
 - Nel file /config.js va specificato il campo **gcmAPIKey** con la chiave che troviamo in Firebase > Console > 
   Tuo Progetto > Impostazioni progetto > Cloud Messaging nella voce **Chiave Server**
   
+- Avviare il server recandosi nella cartella /server e digitare uk comando **node server.js**
+  
 - La **subscription** ovvero l'oggetto che poi va passato a Telegram come token per associare le Push a questo client, 
   viene determinata nella funzione **subscribe()** del file /manin.js. Per essere precisi il valore da inviare nel campo
   token è ottenuto parsificando **subscription** in JSON con `subscription.toJSON()` e come token viene messa la stringa
