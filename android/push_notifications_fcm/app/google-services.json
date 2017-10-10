@@ -1,0 +1,55 @@
+{
+  "project_info": {
+    "project_number": "313388324591",
+    "firebase_url": "https://telegramserver-b82eb.firebaseio.com",
+    "project_id": "telegramserver-b82eb",
+    "storage_bucket": "telegramserver-b82eb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:313388324591:android:f4341a338a293afe",
+        "android_client_info": {
+          "package_name": "io.apisitter.library.pushtest"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "313388324591-l0g6j09b7n2rr0siaibqithsabs0tsak.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "io.apisitter.library.pushtest",
+            "certificate_hash": "10dca5f2facef4503d9ae47169ad2ffcb45e5db6"
+          }
+        },
+        {
+          "client_id": "313388324591-ndgfbi4p8q9g48j1k7iknne9fmbf4rk4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB78ennaMcsWUHW_5VtlfTo9VfKcEx2g6g"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 2,
+          "other_platform_oauth_client": [
+            {
+              "client_id": "313388324591-ndgfbi4p8q9g48j1k7iknne9fmbf4rk4.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
