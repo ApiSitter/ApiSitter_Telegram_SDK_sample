@@ -1,0 +1,42 @@
+{
+  "project_info": {
+    "project_number": "313388324591",
+    "firebase_url": "https://telegramserver-b82eb.firebaseio.com",
+    "project_id": "telegramserver-b82eb",
+    "storage_bucket": "telegramserver-b82eb.appspot.com"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:313388324591:android:4f1719fe835a7c5b",
+        "android_client_info": {
+          "package_name": "io.apisitter.library.gcm_test"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "313388324591-ndgfbi4p8q9g48j1k7iknne9fmbf4rk4.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB78ennaMcsWUHW_5VtlfTo9VfKcEx2g6g"
+        }
+      ],
+      "services": {
+        "analytics_service": {
+          "status": 1
+        },
+        "appinvite_service": {
+          "status": 1,
+          "other_platform_oauth_client": []
+        },
+        "ads_service": {
+          "status": 2
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
