@@ -1,6 +1,6 @@
-##Considerazioni generali
+## Considerazioni generali
 
-###Esempi push notification
+### Esempi push notification
 
 - **push_notification_fcm**: è il progetto fatto per catturare i Firebase Cloud Message. Le riceviamo ma **non hanno dati**
   al loro interno.
@@ -9,6 +9,6 @@
   recuperare anche i dati**.
   
   
-###Esempi in Web
+### Esempi in Web
 
 - Ci sono tutti gli esempi in semplici pagine html
